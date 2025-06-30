@@ -6,8 +6,76 @@
     <title>FurnitureCo. - Online Furniture Store</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Styles -->
-    <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Import Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            background-color: #f9fafb; /* Light gray background */
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Custom animations */
+        .animate-fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+        .animate-slide-up {
+            animation: slideUp 0.8s ease-out forwards;
+            animation-delay: 0.2s;
+            opacity: 0;
+        }
+        .animate-bounce {
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(-5%); animation-timing-function: cubic-bezier(0.8, 0, 1, 1); }
+            50% { transform: translateY(0); animation-timing-function: cubic-bezier(0, 0, 0.2, 1); }
+        }
+
+        /* Custom styles for the message modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            animation: zoomIn 0.3s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+    </style>
 </head>
 <body class="flex flex-col min-h-screen">
     <!-- Header -->
@@ -58,7 +126,569 @@
         </div>
     </div>
 
-    <!-- Main Application Script (type="module" for imports/exports) -->
-    <script type="module" src="js/app.js"></script>
+    <script>
+        // --- Mock Product Data ---
+        const products = [
+            {
+                id: 'prod1',
+                name: 'Modern Sofa',
+                price: 799.99,
+                description: 'A comfortable and stylish modern sofa, perfect for any living room. Upholstered in high-quality fabric.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Modern+Sofa',
+                category: 'Living Room',
+                dimensions: '80"W x 35"D x 30"H',
+                material: 'Fabric, Wood Frame',
+            },
+            {
+                id: 'prod2',
+                name: 'Dining Table Set',
+                price: 1200.00,
+                description: 'Elegant dining table with four matching chairs, made from solid oak. Ideal for family dinners.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Dining+Table',
+                category: 'Dining Room',
+                dimensions: '60"L x 36"W x 30"H',
+                material: 'Solid Oak',
+            },
+            {
+                id: 'prod3',
+                name: 'Queen Bed Frame',
+                price: 550.00,
+                description: 'Sturdy and stylish queen-sized bed frame with a minimalist design. Easy to assemble.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Queen+Bed',
+                category: 'Bedroom',
+                dimensions: '85"L x 62"W x 45"H',
+                material: 'Metal, Wood Slats',
+            },
+            {
+                id: 'prod4',
+                name: 'Ergonomic Office Chair',
+                price: 299.99,
+                description: 'High-back ergonomic office chair with adjustable lumbar support and armrests. Perfect for long work hours.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Office+Chair',
+                category: 'Office',
+                dimensions: '26"W x 26"D x 48"H (adjustable)',
+                material: 'Mesh, Steel Base',
+            },
+            {
+                id: 'prod5',
+                name: 'Bookshelf',
+                price: 180.00,
+                description: 'Five-tier bookshelf with a contemporary design. Great for organizing books and decor.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Bookshelf',
+                category: 'Living Room',
+                dimensions: '30"W x 12"D x 70"H',
+                material: 'Engineered Wood',
+            },
+            {
+                id: 'prod6',
+                name: 'Coffee Table',
+                price: 250.00,
+                description: 'Sleek glass top coffee table with a metal frame. Adds a modern touch to your living space.',
+                imageUrl: 'https://placehold.co/400x300/F0F0F0/333333?text=Coffee+Table',
+                category: 'Living Room',
+                dimensions: '40"L x 20"W x 18"H',
+                material: 'Tempered Glass, Steel',
+            },
+        ];
+
+        // --- Global State ---
+        let cartItems = [];
+        let currentPage = 'home';
+        let pageProps = {};
+
+        // --- Utility Functions ---
+
+        /**
+         * Displays a custom modal message instead of `alert()`.
+         * @param {string} message - The message to display.
+         */
+        function showCustomMessage(message) {
+            const modalOverlay = document.getElementById('custom-message-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseButton = document.getElementById('modal-close-button');
+
+            modalMessage.textContent = message;
+            modalOverlay.classList.remove('hidden');
+
+            const closeHandler = () => {
+                modalOverlay.classList.add('hidden');
+                modalCloseButton.removeEventListener('click', closeHandler);
+            };
+            modalCloseButton.addEventListener('click', closeHandler);
+        }
+
+        /**
+         * Updates the cart item count displayed in the header.
+         */
+        function updateCartCountDisplay() {
+            const cartItemCountSpan = document.getElementById('cart-item-count');
+            const totalCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+            cartItemCountSpan.textContent = totalCount;
+            if (totalCount > 0) {
+                cartItemCountSpan.classList.remove('hidden');
+            } else {
+                cartItemCountSpan.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Calculates the total price of items in the cart.
+         * @returns {number} The total price.
+         */
+        function getCartTotal() {
+            return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+        }
+
+        // --- Cart Management Functions ---
+
+        /**
+         * Adds a product to the cart or updates its quantity if already present.
+         * @param {object} product - The product object to add.
+         * @param {number} quantity - The quantity to add (default 1).
+         */
+        function addToCart(product, quantity = 1) {
+            const existingItemIndex = cartItems.findIndex((item) => item.id === product.id);
+            if (existingItemIndex > -1) {
+                cartItems[existingItemIndex].quantity += quantity;
+            } else {
+                cartItems.push({ ...product, quantity });
+            }
+            updateCartCountDisplay();
+            showCustomMessage(`${product.name} added to cart!`);
+        }
+
+        /**
+         * Removes a product from the cart.
+         * @param {string} productId - The ID of the product to remove.
+         */
+        function removeFromCart(productId) {
+            cartItems = cartItems.filter((item) => item.id !== productId);
+            updateCartCountDisplay();
+            renderCheckoutPage(); // Re-render checkout page if currently on it
+        }
+
+        /**
+         * Updates the quantity of a product in the cart.
+         * @param {string} productId - The ID of the product to update.
+         * @param {number} newQuantity - The new quantity.
+         */
+        function updateQuantity(productId, newQuantity) {
+            cartItems = cartItems.map((item) =>
+                item.id === productId ? { ...item, quantity: Math.max(1, newQuantity) } : item
+            );
+            updateCartCountDisplay();
+            renderCheckoutPage(); // Re-render checkout page if currently on it
+        }
+
+        /**
+         * Clears all items from the cart.
+         */
+        function clearCart() {
+            cartItems = [];
+            updateCartCountDisplay();
+        }
+
+        // --- Navigation Function ---
+
+        /**
+         * Navigates to a different page.
+         * @param {string} page - The name of the page to navigate to.
+         * @param {object} props - Optional properties to pass to the page.
+         */
+        function navigate(page, props = {}) {
+            currentPage = page;
+            pageProps = props;
+            renderPage();
+            window.scrollTo(0, 0); // Scroll to top on page change
+        }
+
+        // --- Page Rendering Functions ---
+
+        /**
+         * Renders the Home Page content.
+         */
+        function renderHomePage() {
+            const appContent = document.getElementById('app-content');
+            const featuredProducts = products.slice(0, 3); // Select a few products to feature
+
+            appContent.innerHTML = `
+                <div class="container mx-auto p-6 font-inter">
+                    <section class="text-center my-12 bg-gradient-to-r from-blue-500 to-purple-600 text-white p-10 rounded-xl shadow-lg">
+                        <h2 class="text-5xl font-extrabold mb-4 animate-fade-in">
+                            Welcome to FurnitureCo.
+                        </h2>
+                        <p class="text-xl mb-8 opacity-90 animate-slide-up">
+                            Your destination for modern and elegant furniture.
+                        </p>
+                        <button id="explore-products-btn" class="bg-white text-blue-600 font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-gray-100 hover:scale-105 transition-all duration-300 transform">
+                            Explore Our Products
+                        </button>
+                    </section>
+
+                    <section class="my-12">
+                        <h3 class="text-3xl font-bold text-gray-800 mb-8 text-center">Featured Products</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            ${featuredProducts.map(product => `
+                                <div class="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
+                                    <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/F0F0F0/333333?text=${encodeURIComponent(product.name)}';" />
+                                    <div class="p-6">
+                                        <h4 class="text-xl font-semibold text-gray-900 mb-2">${product.name}</h4>
+                                        <p class="text-gray-600 mb-4 truncate">${product.description}</p>
+                                        <div class="flex justify-between items-center">
+                                            <span class="text-2xl font-bold text-blue-600">$${product.price.toFixed(2)}</span>
+                                            <button data-product-id="${product.id}" class="view-details-btn bg-blue-600 text-white py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-200">
+                                                View Details
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </section>
+
+                    <section class="my-12 text-center bg-gray-100 p-10 rounded-xl shadow-lg">
+                        <h3 class="text-3xl font-bold text-gray-800 mb-4">Why Choose Us?</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+                            <div class="p-6 bg-white rounded-lg shadow-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 text-blue-600 mx-auto mb-4">
+                                    <path d="m7.5 4.27 9 5.15" /><path d="M2.52 9.81 12 15l9.48-5.19" /><path d="m7.5 19.73 9-5.15" /><path d="M12 22.5 2.52 17.19l9.48-5.19 9.48 5.19L12 22.5Z" />
+                                </svg>
+                                <h4 class="text-xl font-semibold mb-2">Quality Products</h4>
+                                <p class="text-gray-600">Hand-picked furniture crafted with the finest materials.</p>
+                            </div>
+                            <div class="p-6 bg-white rounded-lg shadow-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 text-green-600 mx-auto mb-4">
+                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                                </svg>
+                                <h4 class="text-xl font-semibold mb-2">Customer Satisfaction</h4>
+                                <p class="text-gray-600">We prioritize your happiness with every purchase.</p>
+                            </div>
+                            <div class="p-6 bg-white rounded-lg shadow-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 text-purple-600 mx-auto mb-4">
+                                    <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                                </svg>
+                                <h4 class="text-xl font-semibold mb-2">Easy Shopping</h4>
+                                <p class="text-gray-600">A seamless online experience from browsing to checkout.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            `;
+
+            // Attach event listeners
+            document.getElementById('explore-products-btn').addEventListener('click', () => navigate('products'));
+            document.querySelectorAll('.view-details-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.target.dataset.productId;
+                    navigate('productDetail', { productId });
+                });
+            });
+        }
+
+        /**
+         * Renders the Product Listing Page content.
+         */
+        function renderProductListingPage() {
+            const appContent = document.getElementById('app-content');
+            appContent.innerHTML = `
+                <div class="container mx-auto p-6 font-inter">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-8 text-center">Our Products</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                        ${products.map(product => `
+                            <div class="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300 flex flex-col">
+                                <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-48 object-cover" onerror="this.onerror=null;this.src='https://placehold.co/400x300/F0F0F0/333333?text=${encodeURIComponent(product.name)}';" />
+                                <div class="p-6 flex flex-col flex-grow">
+                                    <h3 class="text-xl font-semibold text-gray-900 mb-2">${product.name}</h3>
+                                    <p class="text-gray-600 text-sm mb-4 flex-grow line-clamp-3">${product.description}</p>
+                                    <div class="flex justify-between items-center mt-auto">
+                                        <span class="text-2xl font-bold text-blue-600">$${product.price.toFixed(2)}</span>
+                                        <button data-product-id="${product.id}" class="view-details-btn bg-blue-600 text-white py-2 px-4 rounded-full hover:bg-blue-700 transition-colors duration-200">
+                                            View Details
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+            // Attach event listeners
+            document.querySelectorAll('.view-details-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.target.dataset.productId;
+                    navigate('productDetail', { productId });
+                });
+            });
+        }
+
+        /**
+         * Renders the Product Detail Page content.
+         * @param {string} productId - The ID of the product to display.
+         */
+        function renderProductDetailPage(productId) {
+            const appContent = document.getElementById('app-content');
+            const product = products.find((p) => p.id === productId);
+
+            if (!product) {
+                appContent.innerHTML = `
+                    <div class="container mx-auto p-6 text-center text-red-600 font-inter">
+                        Product not found.
+                        <button id="back-to-products-btn" class="mt-4 bg-gray-200 text-gray-800 py-2 px-4 rounded-full hover:bg-gray-300 transition-colors duration-200">
+                            Back to Products
+                        </button>
+                    </div>
+                `;
+                document.getElementById('back-to-products-btn').addEventListener('click', () => navigate('products'));
+                return;
+            }
+
+            appContent.innerHTML = `
+                <div class="container mx-auto p-6 font-inter">
+                    <div class="bg-white rounded-xl shadow-lg p-8 flex flex-col md:flex-row items-center md:items-start gap-8">
+                        <div class="md:w-1/2 w-full">
+                            <img src="${product.imageUrl}" alt="${product.name}" class="w-full h-auto rounded-lg shadow-md max-h-96 object-contain" onerror="this.onerror=null;this.src='https://placehold.co/600x450/F0F0F0/333333?text=${encodeURIComponent(product.name)}';" />
+                        </div>
+                        <div class="md:w-1/2 w-full">
+                            <h2 class="text-4xl font-bold text-gray-900 mb-4">${product.name}</h2>
+                            <p class="text-gray-700 text-lg mb-6 leading-relaxed">${product.description}</p>
+                            <div class="mb-6">
+                                <p class="text-gray-600 text-sm">
+                                    <strong class="text-gray-800">Category:</strong> ${product.category}
+                                </p>
+                                <p class="text-gray-600 text-sm">
+                                    <strong class="text-gray-800">Dimensions:</strong> ${product.dimensions}
+                                </p>
+                                <p class="text-gray-600 text-sm">
+                                    <strong class="text-gray-800">Material:</strong> ${product.material}
+                                </p>
+                            </div>
+                            <p class="text-5xl font-extrabold text-blue-600 mb-8">$${product.price.toFixed(2)}</p>
+                            <div class="flex flex-col sm:flex-row gap-4">
+                                <button id="add-to-cart-btn" class="flex-1 bg-blue-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 transition-all duration-300 transform">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="inline-block w-5 h-5 mr-2">
+                                        <circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                                    </svg> Add to Cart
+                                </button>
+                                <button id="back-to-products-btn" class="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 px-6 rounded-full shadow-md hover:bg-gray-300 hover:scale-105 transition-all duration-300 transform">
+                                    Back to Products
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Attach event listeners
+            document.getElementById('add-to-cart-btn').addEventListener('click', () => addToCart(product));
+            document.getElementById('back-to-products-btn').addEventListener('click', () => navigate('products'));
+        }
+
+        /**
+         * Renders the Checkout Page content.
+         */
+        function renderCheckoutPage() {
+            const appContent = document.getElementById('app-content');
+            const cartTotal = getCartTotal();
+
+            if (cartItems.length === 0) {
+                appContent.innerHTML = `
+                    <div class="container mx-auto p-6 text-center font-inter">
+                        <h2 class="text-3xl font-bold text-gray-800 mb-4">Your Cart is Empty</h2>
+                        <p class="text-gray-600 mb-6">Looks like you haven't added anything to your cart yet.</p>
+                        <button id="start-shopping-btn" class="bg-blue-600 text-white py-2 px-6 rounded-full hover:bg-blue-700 transition-colors duration-200">
+                            Start Shopping
+                        </button>
+                    </div>
+                `;
+                document.getElementById('start-shopping-btn').addEventListener('click', () => navigate('products'));
+                return;
+            }
+
+            appContent.innerHTML = `
+                <div class="container mx-auto p-6 font-inter">
+                    <h2 class="text-4xl font-bold text-gray-800 mb-8 text-center">Checkout</h2>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                        <!-- Cart Summary -->
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-2xl font-semibold text-gray-900 mb-6 border-b pb-4">Your Order</h3>
+                            ${cartItems.map(item => `
+                                <div class="flex items-center justify-between py-4 border-b last:border-b-0">
+                                    <div class="flex items-center">
+                                        <img src="${item.imageUrl}" alt="${item.name}" class="w-16 h-16 object-cover rounded-md mr-4" onerror="this.onerror=null;this.src='https://placehold.co/100x100/F0F0F0/333333?text=${encodeURIComponent(item.name)}';" />
+                                        <div>
+                                            <h4 class="font-medium text-gray-900">${item.name}</h4>
+                                            <p class="text-gray-600 text-sm">$${item.price.toFixed(2)}</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-3">
+                                        <button data-product-id="${item.id}" data-action="decrease" class="quantity-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300">
+                                            -
+                                        </button>
+                                        <span class="font-semibold text-gray-800">${item.quantity}</span>
+                                        <button data-product-id="${item.id}" data-action="increase" class="quantity-btn bg-gray-200 text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-300">
+                                            +
+                                        </button>
+                                        <button data-product-id="${item.id}" class="remove-from-cart-btn text-red-500 hover:text-red-700 ml-4">
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            <div class="flex justify-between items-center mt-6 pt-4 border-t">
+                                <span class="text-2xl font-bold text-gray-900">Total:</span>
+                                <span class="text-3xl font-extrabold text-blue-600">$${cartTotal.toFixed(2)}</span>
+                            </div>
+                        </div>
+
+                        <!-- Shipping Information -->
+                        <div class="bg-white rounded-xl shadow-lg p-6">
+                            <h3 class="text-2xl font-semibold text-gray-900 mb-6 border-b pb-4">Shipping Information</h3>
+                            <form id="checkout-form" class="space-y-6">
+                                <div>
+                                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Full Name
+                                    </label>
+                                    <input type="text" id="name" name="name" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500" required />
+                                </div>
+                                <div>
+                                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Email Address
+                                    </label>
+                                    <input type="email" id="email" name="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500" required />
+                                </div>
+                                <div>
+                                    <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
+                                        Address
+                                    </label>
+                                    <input type="text" id="address" name="address" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500" required />
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
+                                            City
+                                        </label>
+                                        <input type="text" id="city" name="city" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500" required />
+                                    </div>
+                                    <div>
+                                        <label for="zip" class="block text-sm font-medium text-gray-700 mb-1">
+                                            Zip Code
+                                        </label>
+                                        <input type="text" id="zip" name="zip" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-blue-500 focus:border-blue-500" required />
+                                    </div>
+                                </div>
+                                <button type="submit" id="place-order-btn" class="w-full bg-green-600 text-white font-semibold py-3 px-6 rounded-full shadow-lg hover:bg-green-700 hover:scale-105 transition-all duration-300 transform">
+                                    Place Order
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Attach event listeners for cart items
+            document.querySelectorAll('.quantity-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.target.dataset.productId;
+                    const action = event.target.dataset.action;
+                    const item = cartItems.find(i => i.id === productId);
+                    if (item) {
+                        updateQuantity(productId, action === 'increase' ? item.quantity + 1 : item.quantity - 1);
+                    }
+                });
+            });
+
+            document.querySelectorAll('.remove-from-cart-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const productId = event.target.dataset.productId;
+                    removeFromCart(productId);
+                });
+            });
+
+            // Attach event listener for checkout form submission
+            document.getElementById('checkout-form').addEventListener('submit', (event) => {
+                event.preventDefault();
+                if (cartItems.length === 0) {
+                    showCustomMessage('Your cart is empty. Please add items before checking out.');
+                    return;
+                }
+
+                const placeOrderBtn = document.getElementById('place-order-btn');
+                placeOrderBtn.textContent = 'Processing Order...';
+                placeOrderBtn.disabled = true;
+
+                // Simulate order processing
+                setTimeout(() => {
+                    clearCart();
+                    navigate('thankYou');
+                }, 1500);
+            });
+        }
+
+        /**
+         * Renders the Thank You Page content.
+         */
+        function renderThankYouPage() {
+            const appContent = document.getElementById('app-content');
+            appContent.innerHTML = `
+                <div class="container mx-auto p-6 text-center font-inter min-h-[60vh] flex flex-col justify-center items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-24 h-24 text-green-500 mb-6 animate-bounce">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+                    </svg>
+                    <h2 class="text-5xl font-extrabold text-gray-800 mb-4">Thank You for Your Order!</h2>
+                    <p class="text-xl text-gray-600 mb-8">
+                        Your order has been placed successfully and will be processed shortly.
+                    </p>
+                    <button id="continue-shopping-btn" class="bg-blue-600 text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-blue-700 hover:scale-105 transition-all duration-300 transform">
+                        Continue Shopping
+                    </button>
+                </div>
+            `;
+
+            // Attach event listener
+            document.getElementById('continue-shopping-btn').addEventListener('click', () => navigate('home'));
+        }
+
+        /**
+         * Main function to render the current page based on global state.
+         */
+        function renderPage() {
+            switch (currentPage) {
+                case 'home':
+                    renderHomePage();
+                    break;
+                case 'products':
+                    renderProductListingPage();
+                    break;
+                case 'productDetail':
+                    renderProductDetailPage(pageProps.productId);
+                    break;
+                case 'checkout':
+                    renderCheckoutPage();
+                    break;
+                case 'thankYou':
+                    renderThankYouPage();
+                    break;
+                default:
+                    renderHomePage();
+            }
+        }
+
+        // --- Event Listeners for Header Navigation ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('site-title').addEventListener('click', () => navigate('home'));
+            document.getElementById('nav-home').addEventListener('click', () => navigate('home'));
+            document.getElementById('nav-products').addEventListener('click', () => navigate('products'));
+            document.getElementById('nav-checkout').addEventListener('click', () => navigate('checkout'));
+
+            // Set current year in footer
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+
+            // Initial render of the home page
+            renderPage();
+            updateCartCountDisplay(); // Ensure cart count is correct on load
+        });
+    </script>
 </body>
 </html>
